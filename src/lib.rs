@@ -20,28 +20,20 @@ const SIZE_IN_BYTES: usize = std::mem::size_of::<u32>();
 const SIZE_IN_BITS: usize = 8 * SIZE_IN_BYTES;
 
 #[inline]
-fn block_index(bit_index: usize) -> usize {
+const fn block_index(bit_index: usize) -> usize {
     bit_index / SIZE_IN_BITS
 }
 #[inline]
-fn bit_index(index: usize) -> usize {
+const fn bit_index(index: usize) -> usize {
     index % SIZE_IN_BITS
 }
 #[inline]
-fn align_count(bit_index: usize) -> usize {
+const fn align_count(bit_index: usize) -> usize {
     bit_index.div_ceil(SIZE_IN_BITS)
 }
 
 impl BitVec {
-    pub const ELEMENTS_PER_WORD: usize = SIZE_IN_BITS;
-
-    pub fn new(size: usize) -> Self {
-        let mut bits = Self::default();
-        bits.grow(size);
-        bits
-    }
-
-    pub fn new_with_value(size: usize, value: bool) -> Self {
+    pub fn new(size: usize, value: bool) -> Self {
         let value = if value { u32::MAX } else { 0 };
         let len = align_count(size);
 
@@ -52,9 +44,17 @@ impl BitVec {
     }
 
     pub fn grow(&mut self, extra_capacity: usize) {
-        let len = align_count(extra_capacity);
-        self.storage.resize(self.storage.len() + len, 0);
+        if self.len > 0 {
+            let last_block = block_index(self.len - 1);
+            // Clear bits that migh be set when using `set_all`.
+            let mask = match bit_index(self.len) {
+                0 => u32::MAX,
+                bits => (1 << bits) - 1,
+            };
+            self.storage[last_block] &= mask;
+        }
         self.len += extra_capacity;
+        self.storage.resize(align_count(self.len), 0);
     }
 
     pub fn push(&mut self, value: bool) {
@@ -68,7 +68,7 @@ impl BitVec {
     pub fn drain(&mut self, range: std::ops::Range<usize>) {
         for src in range.end..self.len {
             let dst = range.start + (src - range.end);
-            let value = self.get_unsafe(src);
+            let value = bit_get!(self.storage, src);
             self.set_value(dst, value);
         }
         self.len -= range.len();
@@ -118,13 +118,9 @@ impl BitVec {
     }
 
     #[inline]
-    pub fn get_unsafe(&self, index: usize) -> bool {
-        bit_get!(self.storage, index)
-    }
-    #[inline]
     pub fn get(&self, index: usize) -> Option<bool> {
         if index < self.len {
-            Some(self.get_unsafe(index))
+            Some(bit_get!(self.storage, index))
         } else {
             None
         }
@@ -153,7 +149,7 @@ impl From<&[bool]> for BitVec {
         if booleans.len() == 0 {
             return Self::default();
         }
-        let mut bits = BitVec::new(booleans.len());
+        let mut bits = BitVec::new(booleans.len(), false);
         for (i, value) in booleans.iter().copied().enumerate() {
             bits.set_value(i, value);
         }
@@ -169,34 +165,21 @@ mod tests {
 
     #[test]
     fn new() {
-        let bits = BitVec::new(33);
+        let bits = BitVec::new(33, false);
         assert_eq!(bits.len(), 33);
         assert_eq!(bits.words().len(), 2);
     }
 
     #[test]
-    fn new_with_value() {
-        let ones = BitVec::new_with_value(33, true);
-        assert_eq!(ones.len(), 33);
-        assert_eq!(ones.words().len(), 2);
-        assert_eq!(ones.as_slice().iter().collect::<Vec<_>>(), vec![true; 33]);
-
-        let zeros = BitVec::new_with_value(33, false);
-        assert_eq!(zeros.len(), 33);
-        assert_eq!(zeros.words().len(), 2);
-        assert_eq!(zeros.as_slice().iter().collect::<Vec<_>>(), vec![false; 33]);
-    }
-
-    #[test]
     fn unset_all() {
-        let mut bits = BitVec::new_with_value(40, true);
+        let mut bits = BitVec::new(40, true);
         bits.unset_all();
         assert_eq!(bits.as_slice().iter().collect::<Vec<_>>(), vec![false; 40]);
     }
 
     #[test]
     fn set_all() {
-        let mut bits = BitVec::new_with_value(40, false);
+        let mut bits = BitVec::new(40, false);
 
         bits.set_all();
         assert_eq!(bits.as_slice().iter().collect::<Vec<_>>(), vec![true; 40]);
@@ -229,7 +212,7 @@ mod tests {
 
     #[test]
     fn set_range() {
-        let mut bits = BitVec::new(8);
+        let mut bits = BitVec::new(8, false);
         bits.set_range(2..6);
 
         assert_eq!(
@@ -252,8 +235,19 @@ mod tests {
     }
 
     #[test]
+    fn grow_clears_exposed_padding_bits() {
+        let mut bits = BitVec::new(1, true);
+
+        bits.grow(31);
+
+        let mut expected = vec![false; 32];
+        expected[0] = true;
+        assert_eq!(bits.as_slice().iter().collect::<Vec<_>>(), expected);
+    }
+
+    #[test]
     fn unset() {
-        let mut bits = BitVec::new_with_value(4, true);
+        let mut bits = BitVec::new(4, true);
 
         bits.unset(2);
 
@@ -265,13 +259,13 @@ mod tests {
 
     #[test]
     fn capacity() {
-        let mut bits = BitVec::new(33);
+        let mut bits = BitVec::new(33, false);
         assert_eq!(bits.len(), 33);
         assert_eq!(bits.capacity(), 31);
 
         bits.drain(10..21);
-        assert_eq!(bits.len(), 23);
-        assert_eq!(bits.capacity(), 41);
+        assert_eq!(bits.len(), 22);
+        assert_eq!(bits.capacity(), 42);
     }
 
     #[test]

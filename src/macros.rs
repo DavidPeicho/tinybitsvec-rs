@@ -30,7 +30,7 @@ macro_rules! impl_index {
             #[inline]
             fn index(&self, index: usize) -> &Self::Output {
                 assert!(index < ($len)(self));
-                let value = self.get_unsafe(index);
+                let value = bit_get!(self.storage, index);
                 if value { &true } else { &false }
             }
         }
