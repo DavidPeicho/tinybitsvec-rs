@@ -29,12 +29,43 @@ macro_rules! impl_index {
 
             #[inline]
             fn index(&self, index: usize) -> &Self::Output {
-                assert!(index < self.len());
                 let value = self.get(index).unwrap();
-                if value {
-                    &true
+                if value { &true } else { &false }
+            }
+        }
+    };
+}
+
+macro_rules! impl_slice {
+    ($ty:ty) => {
+        impl<'a> $ty {
+            #[inline]
+            pub fn get(&self, index: usize) -> Option<bool> {
+                if index < self.len() {
+                    Some(bit_get!(self.storage, self.range.start + index))
                 } else {
-                    &false
+                    None
+                }
+            }
+
+            #[inline]
+            pub fn len(&self) -> usize {
+                self.range.len()
+            }
+
+            #[inline]
+            pub fn words(&self) -> &[u32] {
+                &self.storage
+            }
+
+            #[inline]
+            pub fn iter(&self) -> $crate::Iter<'_> {
+                $crate::Iter {
+                    slice: $crate::Slice {
+                        storage: self.storage,
+                        range: self.range.clone(),
+                    },
+                    index: 0,
                 }
             }
         }

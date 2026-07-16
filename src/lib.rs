@@ -2,9 +2,11 @@ mod iter;
 #[macro_use]
 mod macros;
 mod slice;
+mod slice_mut;
 
 pub use iter::Iter;
-pub use slice::{Slice, SliceMut};
+pub use slice::*;
+pub use slice_mut::*;
 
 #[cfg_attr(
     feature = "rkyv",
@@ -14,26 +16,6 @@ pub use slice::{Slice, SliceMut};
 pub struct BitVec {
     storage: Vec<u32>,
     len: usize,
-}
-
-const SIZE_IN_BYTES: usize = std::mem::size_of::<u32>();
-const SIZE_IN_BITS: usize = 8 * SIZE_IN_BYTES;
-
-#[inline]
-const fn block_index(bit_index: usize) -> usize {
-    bit_index / SIZE_IN_BITS
-}
-#[inline]
-const fn bit_index(index: usize) -> usize {
-    index % SIZE_IN_BITS
-}
-#[inline]
-const fn align_count(bit_index: usize) -> usize {
-    bit_index.div_ceil(SIZE_IN_BITS)
-}
-#[inline]
-const fn storage_range(range: std::ops::Range<usize>) -> std::ops::Range<usize> {
-    block_index(range.start)..align_count(range.end)
 }
 
 impl BitVec {
@@ -93,7 +75,10 @@ impl BitVec {
     }
 
     pub fn iter(&self) -> Iter<'_> {
-        self.as_slice().iter()
+        Iter {
+            slice: self.as_slice(),
+            index: 0,
+        }
     }
 
     pub fn unset_all(&mut self) {
@@ -148,7 +133,7 @@ impl BitVec {
 
     #[inline]
     fn capacity(&self) -> usize {
-        let bits = self.storage.len() * SIZE_IN_BITS;
+        let bits = SIZE_IN_BITS * self.storage.len();
         assert!(bits >= self.len);
         bits - self.len
     }
