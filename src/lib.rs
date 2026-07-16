@@ -265,9 +265,13 @@ mod tests {
 
     #[test]
     fn capacity() {
-        let bits = BitVec::new(33);
+        let mut bits = BitVec::new(33);
+        assert_eq!(bits.len(), 33);
         assert_eq!(bits.capacity(), 31);
-        assert_eq!(bits.len(), 32);
+
+        bits.drain(10..21);
+        assert_eq!(bits.len(), 23);
+        assert_eq!(bits.capacity(), 41);
     }
 
     #[test]
