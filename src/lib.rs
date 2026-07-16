@@ -20,7 +20,7 @@ pub use slice_mut::*;
 /// ## Example
 ///
 /// ```rust
-/// use tinybitvec::BitVec;
+/// use tinybitsvec::BitVec;
 ///
 /// let mut bits = BitVec::default();
 /// bits.push(true);

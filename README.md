@@ -7,7 +7,7 @@ Tiny vector of bits using a `u32` slice as storage.
 Basic example:
 
 ```rust
-use tinybitvec::BitVec;
+use tinybitsvec::BitVec;
 
 // 10 bits initialized to false
 let mut bits = BitVec::new(10, false);
@@ -25,7 +25,7 @@ println!("{:?}", bits[1]); // true
 Immutable and mutable slice types:
 
 ```rust
-use tinybitvec::BitVec;
+use tinybitsvec::BitVec;
 
 let bits = BitVec::from(&[false, true, false, false][..]);
 
