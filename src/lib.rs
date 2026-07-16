@@ -24,6 +24,8 @@ macro_rules! bit_unset {
 
 mod slice;
 
+use std::ops::Index;
+
 pub use slice::{Slice, SliceMut};
 
 #[cfg_attr(
@@ -85,17 +87,6 @@ impl BitVec {
 
     pub fn set_all(&mut self) {
         self.as_mut_slice().set_all();
-    }
-
-    pub fn from_bools(booleans: &[bool]) -> Self {
-        if booleans.len() == 0 {
-            return Self::default();
-        }
-        let mut bits = BitVec::new(booleans.len());
-        for i in 0..booleans.len() {
-            bits.set_value(i, booleans[i]);
-        }
-        bits
     }
 
     pub fn push(&mut self, value: bool) {
@@ -170,6 +161,30 @@ impl BitVec {
         let bits = self.storage.len() * SIZE_IN_BITS;
         assert!(bits >= self.len);
         bits - self.len
+    }
+}
+
+impl From<&[bool]> for BitVec {
+    fn from(booleans: &[bool]) -> Self {
+        if booleans.len() == 0 {
+            return Self::default();
+        }
+        let mut bits = BitVec::new(booleans.len());
+        for (i, value) in booleans.iter().copied().enumerate() {
+            bits.set_value(i, value);
+        }
+        bits
+    }
+}
+
+impl Index<usize> for BitVec {
+    type Output = bool;
+
+    #[inline]
+    fn index(&self, index: usize) -> &Self::Output {
+        assert!(index < self.len);
+        let value = self.get_unsafe(index);
+        if value { &true } else { &false }
     }
 }
 
@@ -263,7 +278,7 @@ mod tests {
 
     #[test]
     fn grow() {
-        let mut bits = BitVec::from_bools(&[true, false]);
+        let mut bits = BitVec::from(&[true, false][..]);
 
         bits.grow(31);
 
@@ -295,10 +310,30 @@ mod tests {
     }
 
     #[test]
+    fn index() {
+        let mut bits = BitVec::from(&[true, false, true][..]);
+
+        assert!(bits[0]);
+        assert!(!bits[1]);
+        assert!(bits[2]);
+
+        let slice = bits.as_slice();
+        assert!(slice[0]);
+        assert!(!slice[1]);
+        assert!(slice[2]);
+
+        let mut slice = bits.as_mut_slice();
+        slice.set(1);
+        assert!(slice[0]);
+        assert!(slice[1]);
+        assert!(slice[2]);
+    }
+
+    #[test]
     fn get_set() {
         // Less than a word
         let booleans = [true, false, false, true];
-        let bits = BitVec::from_bools(&booleans);
+        let bits = BitVec::from(booleans.as_slice());
         assert_eq!(bits.len(), 4);
         for i in 0..booleans.len() {
             assert_eq!(bits.get(i), Some(booleans[i]));
@@ -310,7 +345,7 @@ mod tests {
         booleans[1] = true;
         booleans[29] = true;
         booleans[31] = true;
-        let bits = BitVec::from_bools(&booleans);
+        let bits = BitVec::from(booleans.as_slice());
         assert_eq!(bits.len(), 32);
         for i in 0..booleans.len() {
             assert_eq!(bits.get(i), Some(booleans[i]), "bit {}", i);
@@ -322,7 +357,7 @@ mod tests {
         booleans[0] = true;
         booleans[29] = true;
         booleans[32] = true;
-        let bits = BitVec::from_bools(&booleans);
+        let bits = BitVec::from(booleans.as_slice());
         assert_eq!(bits.len(), 33);
         for i in 0..booleans.len() {
             assert_eq!(bits.get(i), Some(booleans[i]));
@@ -338,7 +373,7 @@ mod tests {
         expected[29] = true;
         expected[32] = true;
 
-        let mut bits = BitVec::from_bools(&expected);
+        let mut bits = BitVec::from(expected.as_slice());
 
         // Drain by the start
         let range = 0..5;

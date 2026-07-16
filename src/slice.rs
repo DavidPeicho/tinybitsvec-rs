@@ -1,3 +1,5 @@
+use std::ops::Index;
+
 #[derive(Debug, Clone, Copy)]
 pub struct Slice<'a> {
     storage: &'a [u32],
@@ -97,5 +99,35 @@ impl<'a> SliceMut<'a> {
 
     pub fn len(&self) -> usize {
         *self.len
+    }
+}
+
+impl Index<usize> for Slice<'_> {
+    type Output = bool;
+
+    #[inline]
+    fn index(&self, index: usize) -> &Self::Output {
+        assert!(index < self.len);
+        let value = self.get_unsafe(index);
+        if value {
+            &true
+        } else {
+            &false
+        }
+    }
+}
+
+impl Index<usize> for SliceMut<'_> {
+    type Output = bool;
+
+    #[inline]
+    fn index(&self, index: usize) -> &Self::Output {
+        assert!(index < *self.len);
+        let value = self.get_unsafe(index);
+        if value {
+            &true
+        } else {
+            &false
+        }
     }
 }
