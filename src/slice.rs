@@ -21,12 +21,16 @@ pub(crate) const fn storage_range(range: std::ops::Range<usize>) -> std::ops::Ra
 }
 
 #[derive(Debug, Clone)]
+/// An immutable view over a range of bits.
 pub struct Slice<'a> {
     pub(crate) storage: &'a [u32],
     pub(crate) range: Range<usize>,
 }
 
 impl Slice<'_> {
+    /// Returns a sub-slice of this slice.
+    ///
+    /// Panics if `range` is out of bounds.
     pub fn slice(&self, range: Range<usize>) -> Self {
         let start = self.range.start + range.start;
         let end = self.range.start + range.end;

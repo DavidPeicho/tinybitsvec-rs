@@ -39,6 +39,7 @@ macro_rules! impl_index {
 macro_rules! impl_slice {
     ($ty:ty) => {
         impl<'a> $ty {
+            /// Returns the bit at `index`, or `None` if out of bounds.
             #[inline]
             pub fn get(&self, index: usize) -> Option<bool> {
                 if index < self.len() {
@@ -48,16 +49,21 @@ macro_rules! impl_slice {
                 }
             }
 
+            /// Returns the number of bits in the slice.
             #[inline]
             pub fn len(&self) -> usize {
                 self.range.len()
             }
 
+            /// Returns the backing words spanned by this slice.
+            ///
+            /// Note: The first and last words may contain bits outside this slice.
             #[inline]
             pub fn words(&self) -> &[u32] {
                 &self.storage
             }
 
+            /// Iterates over the bits in this slice.
             #[inline]
             pub fn iter(&self) -> $crate::Iter<'_> {
                 $crate::Iter {

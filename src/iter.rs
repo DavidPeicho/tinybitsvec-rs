@@ -1,6 +1,7 @@
 use crate::Slice;
 
 #[derive(Debug, Clone)]
+/// Iterator over bits in a slice.
 pub struct Iter<'a> {
     pub(crate) slice: Slice<'a>,
     pub(crate) index: usize,

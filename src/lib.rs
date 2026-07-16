@@ -13,12 +13,14 @@ pub use slice_mut::*;
     derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)
 )]
 #[derive(Debug, Default)]
+/// A compact vector of bits.
 pub struct BitVec {
     storage: Vec<u32>,
     len: usize,
 }
 
 impl BitVec {
+    /// Creates `size` bits initialized to `value`.
     pub fn new(size: usize, value: bool) -> Self {
         let value = if value { u32::MAX } else { 0 };
         let len = align_count(size);
@@ -29,6 +31,7 @@ impl BitVec {
         bits
     }
 
+    /// Appends `extra_capacity` zero bits.
     pub fn grow(&mut self, extra_capacity: usize) {
         if self.len > 0 {
             let last_block = block_index(self.len - 1);
@@ -43,6 +46,9 @@ impl BitVec {
         self.storage.resize(align_count(self.len), 0);
     }
 
+    /// Appends one bit.
+    ///
+    /// Note: Might grow the storage if needed.
     pub fn push(&mut self, value: bool) {
         if self.capacity() == 0 {
             self.storage.resize(self.storage.len() + 1, 0);
@@ -51,6 +57,9 @@ impl BitVec {
         self.len += 1;
     }
 
+    /// Removes `range` and shifts bits to the left.
+    ///
+    /// Panics or overflows if `range` is not within `0..self.len()`.
     pub fn drain(&mut self, range: std::ops::Range<usize>) {
         for src in range.end..self.len {
             let dst = range.start + (src - range.end);
@@ -60,6 +69,7 @@ impl BitVec {
         self.len -= range.len();
     }
 
+    /// Borrows all bits as an immutable slice.
     pub fn as_slice(&self) -> Slice<'_> {
         Slice {
             storage: &self.storage,
@@ -67,6 +77,7 @@ impl BitVec {
         }
     }
 
+    /// Borrows all bits as a mutable slice.
     pub fn as_mut_slice(&mut self) -> SliceMut<'_> {
         SliceMut {
             storage: &mut self.storage,
@@ -74,6 +85,7 @@ impl BitVec {
         }
     }
 
+    /// Iterates over all bits.
     pub fn iter(&self) -> Iter<'_> {
         Iter {
             slice: self.as_slice(),
@@ -81,18 +93,30 @@ impl BitVec {
         }
     }
 
+    /// Clears all bits.
+    ///
+    /// Note: Doesn't shrink storage
     pub fn unset_all(&mut self) {
         self.as_mut_slice().unset_all();
     }
 
+    /// Sets all allocated words.
+    ///
+    /// Padding bits outside `0..self.len()` are also set.
     pub fn set_all(&mut self) {
         self.as_mut_slice().set_all();
     }
 
+    /// Sets every bit in `range`.
+    ///
+    /// Panics if `range` reaches outside allocated storage.
     pub fn set_range(&mut self, range: std::ops::Range<usize>) {
         self.as_mut_slice().set_range(range);
     }
 
+    /// Sets `index` to `value`.
+    ///
+    /// Panics if `index` reaches outside allocated storage.
     #[inline]
     pub fn set_value(&mut self, index: usize, value: bool) {
         if value {
@@ -102,16 +126,23 @@ impl BitVec {
         }
     }
 
+    /// Sets `index` to `true`.
+    ///
+    /// Panics if `index` reaches outside allocated storage.
     #[inline]
     pub fn set(&mut self, index: usize) {
         bit_set!(self.storage, index);
     }
 
+    /// Sets `index` to `false`.
+    ///
+    /// Panics if `index` reaches outside allocated storage.
     #[inline]
     pub fn unset(&mut self, index: usize) {
         bit_unset!(self.storage, index);
     }
 
+    /// Returns the bit at `index`, or `None` if out of bounds.
     #[inline]
     pub fn get(&self, index: usize) -> Option<bool> {
         if index < self.len {
@@ -121,11 +152,15 @@ impl BitVec {
         }
     }
 
+    /// Returns the number of bits.
     #[inline]
     pub fn len(&self) -> usize {
         self.len
     }
 
+    /// Returns the backing words.
+    ///
+    /// The last word may contain padding bits outside `0..self.len()`.
     #[inline]
     pub fn words(&self) -> &[u32] {
         &self.storage
@@ -256,6 +291,12 @@ mod tests {
         assert!(bits[34]);
         assert!(!bits[31]);
         assert!(!bits[33]);
+
+        let mut bits = BitVec::new(4, false);
+
+        // `set_all` shouldn't set values outside of range
+        bits.as_mut_slice().slice(1..2).set_all();
+        assert_eq!(bits.iter().collect::<Vec<_>>(), [false, true, false, false]);
     }
 
     #[test]
