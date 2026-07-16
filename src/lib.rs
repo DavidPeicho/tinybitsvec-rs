@@ -20,6 +20,8 @@ pub use slice_mut::*;
 /// ## Example
 ///
 /// ```rust
+/// use tinybitvec::BitVec;
+///
 /// let mut bits = BitVec::default();
 /// bits.push(true);
 /// println!("{:?}", bits[0]); // true
@@ -28,7 +30,7 @@ pub use slice_mut::*;
 /// println!("{:?}", bits[31]); // false
 ///
 /// bits.set(2);
-/// let slice_values = bits.as_slice().slice(1..3).collect::<Vec<bool>>();
+/// let slice_values = bits.as_slice().slice(1..3).iter().collect::<Vec<bool>>();
 /// println!("{:?}", slice_values); // [true, false, true]
 /// ```
 pub struct BitVec {
