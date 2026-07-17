@@ -1,4 +1,4 @@
-use crate::{SIZE_IN_BITS, bit_index, slice::storage_range};
+use crate::{bit_index, slice::storage_range, SIZE_IN_BITS};
 use std::ops::Range;
 
 #[derive(Debug)]

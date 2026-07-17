@@ -104,7 +104,7 @@ impl BitVec {
         }
     }
 
-    /// Iterates over all bits.
+    /// See [`Slice::iter`].
     pub fn iter(&self) -> Iter<'_> {
         Iter {
             slice: self.as_slice(),
@@ -112,30 +112,22 @@ impl BitVec {
         }
     }
 
-    /// Clears all bits.
-    ///
-    /// Note: Doesn't shrink storage
+    /// See [`SliceMut::unset_all`].
     pub fn unset_all(&mut self) {
         self.as_mut_slice().unset_all();
     }
 
-    /// Sets all allocated words.
-    ///
-    /// Padding bits outside `0..self.len()` are also set.
+    /// See [`SliceMut::set_all`].
     pub fn set_all(&mut self) {
         self.as_mut_slice().set_all();
     }
 
-    /// Sets every bit in `range`.
-    ///
-    /// Panics if `range` reaches outside allocated storage.
+    /// See [`SliceMut::set_range`].
     pub fn set_range(&mut self, range: std::ops::Range<usize>) {
         self.as_mut_slice().set_range(range);
     }
 
-    /// Same as .
-    ///
-    /// Panics if `range` reaches outside allocated storage.
+    /// See [`SliceMut::unset_range`].
     pub fn unset_range(&mut self, range: std::ops::Range<usize>) {
         self.as_mut_slice().unset_range(range);
     }
